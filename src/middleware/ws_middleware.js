@@ -2,7 +2,7 @@ const {getCurrentTime} = require("../tools/ws_dateTime")
 // const fs = require("fs");
 const path = require("path");
 const {sendMail} = require("../tools/ws_email");
-const { execSQL}=require("../tools/ws_mysql")
+const {execSQL}=require("../tools/ws_mysql")
 // const {json} = require("express");
 
 //跨域中间件
@@ -12,7 +12,7 @@ let crossDomainM = (req, resp, next) => {
     resp.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
     resp.header("X-Powered-By",' 3.2.1')
     next();
-}
+};
 //404中间件
 let notFoundMF = function (notFoundFilePath) {
     if (!path.isAbsolute(notFoundFilePath)) {
@@ -29,7 +29,7 @@ let notFoundMF = function (notFoundFilePath) {
 
         resp.status(404).sendFile(notFoundFilePath)
     }
-}
+};
 //日志中间件
 let rizhiM = (req, resp, next) =>{
     // 日志记录
@@ -51,7 +51,7 @@ let rizhiM = (req, resp, next) =>{
     // 继续传递请求 响应 next
 
     next()
-}
+};
 //错误处理中间件
 let handlerErrorMF = function (errorResponseFilePath) {
     if (!path.isAbsolute(errorResponseFilePath)) {
@@ -76,11 +76,43 @@ let handlerErrorMF = function (errorResponseFilePath) {
         })
         resp.status(500).sendFile(errorResponseFilePath)
     }
-}
+};
+//工具中间件
+let toolM=(req,resp,next)=>{
+    function ResponseTemp(code,msg,data){
+            return {
+                code,
+                msg,
+                data
+            }
+        };
+    resp.tool={
+        execSQL,
+        ResponseTemp,
+        execSQLAutoResponse:function (sql,successMsg="查询成功！",handlerResultF=result=>result){
+            execSQL(sql).then(result=>{
+                resp.send(ResponseTemp(0,successMsg,handlerResultF(result)));
+            }).catch(error=>{
+                resp.send(ResponseTemp(-1,"API出现错误",null));
+            })
+        },
+        execSQLTEMPAutoResponse:function (sqlTEMP,values=[],successMsg="查询成功！",handlerResultF=result=>result){
+            execSQL(sqlTEMP,values).then(result=>{
+                resp.send(ResponseTemp(0,successMsg,handlerResultF(result)));
+            }).catch(error=>{
+                resp.send(ResponseTemp(-1,"API出现错误",null));
+            })
+        }
+    };
+    next();
+};
+
+
 module.exports = {
     rizhiM,
     notFoundMF,
     handlerErrorMF,
-    crossDomainM
-}
+    crossDomainM,
+    toolM
+};
 
